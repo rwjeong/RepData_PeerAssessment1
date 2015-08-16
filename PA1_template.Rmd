@@ -1,156 +1,25 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-author: "by Robert Jeong"
 output: 
   html_document:
-    keep_md: yes
-    toc: yes
+    keep_md: true
 ---
 
 
 ## Loading and preprocessing the data
-The following script assumes fork/clone of the GitHub repository created for this assignment from [Roger Peng](http://github.com/rdpeng/RepData_PeerAssessment1).  
-
-* Load the data (i.e. `read.csv()`)
-```{r DataLoad, echo=TRUE}
-# Read in the data file into a variable, ACT, stored in the subfolder Data of the same working directory of markdown file.
-# But first check if it exists and skip, otherwise create it 
-if (!exists("ACT")) {
-  if (!file.exists("./Data/activity.csv")) {
-    unzip("activity.zip", overwrite = TRUE, exdir = "./Data")
-    ACT <- read.csv("Data/activity.csv", na.strings = "NA")
-  } else {
-      ACT <- read.csv("Data/activity.csv", na.strings = "NA")
-}}
-```
-
-* Process/transform the data (if necessary) into a format suitable for your analysis  
-``` {r Process, echo=TRUE}
-# Get complete cases and store into separate variable
-CDATA <- ACT[complete.cases(ACT),]
-summary(CDATA)
-str(CDATA)
-```
-****  
-
-## What is mean total number of steps taken per day?  
-
-* Calculate the total number of steps taken per day  
-```{r MeanStepsPerDay, echo=TRUE}
-StepsPerDay <- aggregate(steps ~ date, CDATA, sum)
-head(StepsPerDay)
-```
-
-* Make a histogram of the total number of steps taken each day  
-``` {r plot1, echo=TRUE}
-# Install ggplot2 if it's not loaded in the current system
-if ("ggplot2" %in% rownames(installed.packages()) != TRUE) {
-  install.packages("ggplot2")
-}
-library(ggplot2)
-
-# Histogram
-ggplot(StepsPerDay, aes(x = steps)) + geom_histogram(fill = "blue", col="white", binwidth = 500) + labs(title = "Steps Per Day", x = "Count of Steps", y = "Count of Days")
-```
-
-* Calculate and report the mean and median of the total number of steps taken per day  
-``` {r stat1, echo=TRUE}
-# Statistical Summary
-summary(StepsPerDay$steps)
-```
-****  
-
-## What is the average daily activity pattern?  
-
-* Make a time series plot (i.e. `type = "l"`) of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)  
-```{r Activity, echo=TRUE}
-Activity <- aggregate(steps ~ interval, CDATA, mean, na.rm = TRUE)
-ggplot(Activity, aes(x = interval, y = steps)) + geom_line(col="blue") + labs(title = "Average Daily Activity Pattern", x = "Military Hour", y = "Average Number of Steps")
-```
-
-* Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
-``` {r MaxSteps, echo=TRUE}
-Activity[which.max(Activity$steps),] 
-```
-######Thus, `r Activity$interval[which.max(Activity$steps)]` hour is the most active part of the day on average.
-****  
-
-## Imputing missing values  
-
-* Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
-``` {r MissingNA, echo=TRUE}
-summary(ACT)
-```
-``` {r echo=TRUE, results="hide" }
-NA_records <- ACT[is.na(ACT$steps),]
-NROW(NA_records)
-```
-    ## `r NROW(NA_records)` is the total number of missing rows in the dataset  
-  
-* Create a new dataset that is equal to the original dataset but with the missing data filled in. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
-    + Elected to use the mean from the 5-minute interval previously calculated with data.frame `Activity`  
-    
-```{r}
-# Create a function to return the Step mean value given the interval on the Activity data.frame
-na_replace <- function(int1) {
-        return(Activity$steps[which(Activity$interval==int1)])
-        }
-
-# Update the NA values with the mean value for the interval using the function above
-Filled_records <- NA_records
 
 
-for (i in 1:NROW(Filled_records))
-{
-Filled_records[i,1] = na_replace(Filled_records[i,3])
-}
 
-# Check for NAs in the Filled_records data.frame. Zero means there are no more NAs in the data.frame
-sum(is.na(Filled_records$steps))
+## What is mean total number of steps taken per day?
 
-# Create a new dataset joining the CDATA with Filled_records
-CDATA2 <- rbind(CDATA, Filled_records)
 
-str(CDATA)
-str(CDATA2)
-```
 
-* Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps
-``` {r plot3, echo=TRUE}
-# Activity with new complete dataset in CDATA2
-StepsPerDay2 <- aggregate(steps ~ date, CDATA2, sum)
-head(StepsPerDay2)
+## What is the average daily activity pattern?
 
-# Install ggplot2 if it's not loaded in the current system
-if ("ggplot2" %in% rownames(installed.packages()) != TRUE) {
-  install.packages("ggplot2")
-}
-library(ggplot2)
 
-# Histogram
-ggplot(StepsPerDay2, aes(x = steps)) + geom_histogram(fill = "green", col="white", binwidth = 500) + labs(title = "Steps Per Day", x = "Count of Steps", y = "Count of Days")
-```
 
-* Calculate and report the mean and median of the total number of steps taken per day  
-``` {r stat2, echo=TRUE}
-# Statistical Summary
-summary(StepsPerDay2$steps)
-```
-  
-## Are there differences in activity patterns between weekdays and weekends?  
-* Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.  
-``` {r Weekend, echo=TRUE}
-CDATA2$DayOf <- ifelse(weekdays(as.Date(CDATA2$date), abbreviate = T) %in% c("Sat","Sun"), "Weekend","Weekday")
-head(CDATA2)
-```
+## Imputing missing values
 
-* Make a panel plot containing a time series plot (i.e. `type = "l"`) of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
-``` {r plot4, echo=TRUE}
-# Activity with new complete dataset in CDATA2
-DayOfWeek <- aggregate(steps ~ interval + DayOf, CDATA2, mean, na.rm = TRUE)
-head(DayOfWeek)
 
-# Line Graph
-ggplot(DayOfWeek, aes(x = interval, y = steps)) + geom_line(col="blue") + facet_grid(DayOf ~ .) + labs(title = "Average Daily Activity Pattern by Weekday vs Weekend", x = "Military Hour", y = "Average Number of Steps")
 
-```
+## Are there differences in activity patterns between weekdays and weekends?
